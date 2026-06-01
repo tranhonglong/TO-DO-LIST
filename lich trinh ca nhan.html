@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Tuần Gamification: Ô Hôm Nay Nổi Bật</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 15px; color: #333; transition: background-image 0.5s ease-in-out; }
+        
+        /* Ô NHẬP TIÊU ĐỀ TÙY BIẾN */
+        .title-container { text-align: center; margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .title-icon { font-size: 24px; }
+        .editable-title {
+            background: transparent;
+            border: none;
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 60%;
+            max-width: 600px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 4px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+        .editable-title:hover { background: rgba(0, 0, 0, 0.03); }
+        .editable-title:focus { background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); outline: none; }
+
+        .current-date-title { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 15px; font-weight: bold; }
+        
+        /* KHU VỰC THỐNG KÊ MÀU MÈ, ĐẸP MẮT */
+        .stats-bar { display: flex; justify-content: center; gap: 15px; margin-bottom: 25px; }
+        .stat-box { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); font-weight: bold; font-size: 13.5px; color: white; transition: all 0.5s ease; }
+        .stat-box.start-date { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .stat-box.active-days { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .stat-box.not-started { background: linear-gradient(135deg, #95a5a6, #7f8c8d) !important; animation: none !important; }
+        .stat-icon { font-size: 18px; }
+        .stat-value { font-size: 15px; font-weight: 800; text-decoration: underline; }
+
+        /* Hiệu ứng nhấp nháy khi hành trình đã kích hoạt */
+        .pulse-active { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        /* Khung chứa các vòng tròn tiến độ */
+        .dashboard-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; margin-bottom: 25px; }
+        
+        .progress-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; width: 160px; text-align: center; }
+        .card-title { font-weight: bold; font-size: 13px; margin-bottom: 10px; height: 36px; display: flex; align-items: center; color: #555; }
+        .card-info { font-size: 11px; color: #7f8c8d; margin-top: 8px; font-weight: 500; }
+
+        /* Vòng tròn tiến độ Conic-Gradient */
+        .circle-container { position: relative; width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.3s ease; }
+        .level-card .circle-container { background: conic-gradient(#e67e22 0deg, #fdf2e9 0deg); }
+        .week-card .circle-container { background: conic-gradient(#28a745 0deg, #e9ecef 0deg); }
+        .circle-inner { width: 84px; height: 84px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .circle-text { font-size: 16px; font-weight: bold; color: #2c3e50; }
+
+        /* Lưới 7 ngày */
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; align-items: start; }
+        
+        /* Ô CỦA NGÀY BÌNH THƯỜNG / TƯƠNG LAI */
+        .day-box { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; border: 2px solid #e2e8f0; transition: all 0.3s ease; }
+        
+        /* 🔥 CẬP NHẬT: Ô CỦA NGÀY HÔM NAY (TO HƠN VÀ ĐỔI MÀU KHÁC) */
+        .day-box.today { 
+            border-color: #007bff; 
+            background-color: #fffdf5; /* Đổi sang màu kem sáng dịu mắt */
+            transform: scale(1.03); /* Phóng to lên 1.03 lần */
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.18); /* Đổ bóng mạnh tạo cảm giác nổi khối */
+            z-index: 10; /* Đảm bảo ô hôm nay đè lên nhẹ các ô bên cạnh nếu bị chạm */
+        }
+        .day-box.today .day-title { color: #007bff; border-bottom-color: #007bff; font-size: 15px; }
+
+        /* Ô CỦA QUÁ KHỨ (ĐÃ KHÓA) */
+        .day-box.locked { background-color: #f8f9fa; color: #6c757d; border-color: #e2e8f0; transform: scale(1); }
+        .day-box.locked .day-title { color: #6c757d; border-bottom-color: #dee2e6; }
+        .day-box.locked .add-btn { background: #ced4da; cursor: not-allowed; }
+        .day-box.locked input, .day-box.locked .delete-btn { cursor: not-allowed; display: none; } 
+
+        .day-title { font-weight: bold; text-align: center; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 8px; color: #475569; font-size: 14px; transition: all 0.3s ease; }
+        .day-progress { font-size: 11px; text-align: center; color: #6c757d; margin-bottom: 10px; font-weight: bold; }
+        
+        /* Danh sách công việc */
+        .task-list { flex-grow: 1; overflow-y: auto; }
+        .task-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; line-height: 1.3; }
+        .task-left { display: flex; align-items: flex-start; flex-grow: 1; }
+        .task-item input { margin-right: 8px; margin-top: 2px; transform: scale(1.1); cursor: pointer; }
+        .done { text-decoration: line-through; color: #adb5bd; }
+        .lock-badge { font-size: 9px; color: #dc3545; background: #f8d7da; padding: 2px 5px; border-radius: 3px; display: inline-block; margin-top: 3px; font-weight: bold;}
+        
+        /* Nút xóa công việc */
+        .delete-btn { background: none; border: none; color: #e74c3c; cursor: pointer; font-size: 12px; padding: 0 4px; font-weight: bold; transition: transform 0.1s; }
+        .delete-btn:hover { transform: scale(1.3); }
+
+        /* Nút bấm thêm việc */
+        .add-btn { width: 100%; background: #007bff; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; margin-top: 8px; font-size: 12px; font-weight: bold; transition: background 0.2s; }
+        .add-btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="title-container">
+        <span class="title-icon">📅</span>
+        <input type="text" class="editable-title" value="QUẢN LÝ TIẾN ĐỘ TUẦN" title="Bấm vào đây để đổi tên tiêu đề">
+    </div>
+    
+    <div class="current-date-title" id="realtime-clock">Hôm nay: --/--/----</div>
+
+    <div class="stats-bar">
+        <div class="stat-box start-date not-started" id="box-start-date">
+            <span class="stat-icon">📅</span>
+            <span id="start-date-text">Chưa bắt đầu hành trình</span>
+        </div>
+        <div class="stat-box active-days not-started" id="box-active-days">
+            <span class="stat-icon">🔥</span>
+            <span id="active-days-text">Đã hoạt động: <span class="stat-value">0</span> ngày</span>
+        </div>
+    </div>
+    
+    <div class="dashboard-container">
+        <div class="progress-card level-card">
+            <div class="card-title">🏆 LEVEL BẢN THÂN: <span id="current-level" style="color:#e67e22; margin-left:4px;">1</span></div>
+            <div class="circle-container" id="level-circle-bg">
+                <div class="circle-inner">
+                    <div class="circle-text" id="level-percent-text">0%</div>
+                </div>
+            </div>
+            <div class="card-info" id="level-xp-text">0 / 50 XP</div>
+            <div class="card-info" style="margin-top:2px; font-size:9px;" id="total-xp-text">Tổng: 0 XP</div>
+        </div>
+
+        <div class="progress-card week-card">
+            <div class="card-title">📊 TIẾN ĐỘ TUẦN NÀY</div>
+            <div class="circle-container" id="week-circle-bg">
+                <div class="circle-inner">
+                    <div class="circle-text" id="week-percent-text">0%</div>
+                </div>
+            </div>
+            <div class="card-info" id="week-tasks-text">0/0 việc</div>
+            <div class="card-info" style="margin-top:2px; font-size:9px;" id="weekly-xp-text">Điểm: 0/50 XP</div>
+        </div>
+    </div>
+
+    <div class="grid-container" id="week-grid"></div>
+
+    <script>
+        let activatedStartDate = null; 
+
+        const dayNames = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"];
+        const grid = document.getElementById('week-grid');
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        const currentDate = now.getDate();
+        const currentDayOfWeek = now.getDay(); 
+        
+        document.getElementById('realtime-clock').innerText = `Hôm nay: ${String(currentDate).padStart(2, '0')}/${String(currentMonth + 1).padStart(2, '0')}/${currentYear}`;
+
+        // DANH SÁCH HÌNH NỀN THEO CẤP ĐỘ
+        const backgroundImages = [
+            'url(https://img.freepik.com/free-photo/vibrant-geometric-background_53876-119102.jpg)',
+            'url(https://img.freepik.com/free-photo/abstract-pastel-background_53876-121287.jpg)',
+            'url(https://img.freepik.com/free-photo/colorful-fluid-background_53876-123456.jpg)',
+            'url(https://img.freepik.com/free-photo/gradient-abstract-background_53876-130000.jpg)',
+            'url(https://img.freepik.com/free-photo/creative-abstract-background_53876-135000.jpg)',
+        ];
+
+        let lastLevel = 1;
+
+        function updateStatsUI() {
+            const boxStart = document.getElementById('box-start-date');
+            const boxActive = document.getElementById('box-active-days');
+
+            if (activatedStartDate === null) {
+                document.getElementById('start-date-text').innerHTML = `Chờ tích việc đầu tiên...`;
+                document.getElementById('active-days-text').innerHTML = `Đã hoạt động: <span class="stat-value">0</span> ngày`;
+                boxStart.classList.add('not-started');
+                boxActive.classList.add('not-started');
+                boxActive.classList.remove('pulse-active');
+            } else {
+                boxStart.classList.remove('not-started');
+                boxActive.classList.remove('not-started');
+                boxActive.classList.add('pulse-active');
+
+                let startDayStr = `${String(activatedStartDate.getDate()).padStart(2, '0')}/${String(activatedStartDate.getMonth() + 1).padStart(2, '0')}/${activatedStartDate.getFullYear()}`;
+                document.getElementById('start-date-text').innerHTML = `Ngày bắt đầu: <span class="stat-value">${startDayStr}</span>`;
+
+                let diffTime = Math.abs(now - activatedStartDate);
+                let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+                document.getElementById('active-days-text').innerHTML = `Đã hoạt động: <span class="stat-value">${diffDays}</span> ngày`;
+            }
+        }
+
+        function getWeekDates() {
+            let dates = [];
+            let currentDayIndex = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+            for (let i = 0; i < 7; i++) {
+                let d = new Date(currentYear, currentMonth, currentDate);
+                d.setDate(now.getDate() - currentDayIndex + i);
+                dates.push(d);
+            }
+            return dates;
+        }
+
+        const weekDates = getWeekDates();
+
+        let tempStorage = {
+            "tasks-0": [], "tasks-1": [], "tasks-2": [], "tasks-3": [], "tasks-4": [], "tasks-5": [], "tasks-6": []
+        };
+
+        weekDates.forEach((dateObj, index) => {
+            let dayBox = document.createElement('div');
+            dayBox.className = 'day-box';
+            let dateString = `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+            
+            let isToday = dateObj.getDate() === currentDate && dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear;
+            let startOfToday = new Date(currentYear, currentMonth, currentDate);
+            let isPast = dateObj < startOfToday;
+            
+            let lockStatusHtml = "";
+            if (isToday) {
+                dayBox.classList.add('today'); // Kích hoạt hiệu ứng to hơn và đổi màu
+            } else if (isPast) {
+                dayBox.classList.add('locked');
+                lockStatusHtml = `<span class="lock-badge">🔒 Đã khóa & Chốt điểm</span>`;
+            }
+
+            dayBox.innerHTML = `
+                <div>
+                    <div class="day-title">${dayNames[index]} (${dateString})</div>
+                    <div class="day-progress" id="day-progress-${index}">Hoàn thành: 0%</div>
+                    ${lockStatusHtml}
+                    <div class="task-list" id="tasks-${index}"></div>
+                </div>
+                <button class="add-btn" id="btn-add-${index}" onclick="addTask(${index}, ${isPast})">+ Thêm việc</button>
+            `;
+            grid.appendChild(dayBox);
+            loadTasks(index, isPast);
+        });
+
+        document.body.style.backgroundImage = backgroundImages[0];
+
+        updateStatsUI();
+        updateAllProgress();
+
+        function addTask(dayIndex, isPast) {
+            if (isPast) {
+                alert("Ngày này đã kết thúc! Điểm kinh nghiệm đã chốt, không thể thêm việc.");
+                return;
+            }
+            let taskText = prompt(`Nhập công việc cho ${dayNames[dayIndex]}:`);
+            if (!taskText || taskText.trim() === "") return;
+            
+            tempStorage[`tasks-${dayIndex}`].push({ text: taskText.trim(), done: false });
+            loadTasks(dayIndex, isPast);
+            updateAllProgress();
+        }
+
+        function deleteTask(dayIndex, taskIndex) {
+            tempStorage[`tasks-${dayIndex}`].splice(taskIndex, 1);
+            loadTasks(dayIndex, false);
+            updateAllProgress();
+        }
+
+        function loadTasks(dayIndex, isPast) {
+            let container = document.getElementById(`tasks-${dayIndex}`);
+            container.innerHTML = "";
+            let tasks = tempStorage[`tasks-${dayIndex}`] || [];
+            tasks.forEach((task, taskIndex) => {
+                let div = document.createElement('div');
+                div.className = 'task-item';
+                
+                let disabledAttr = isPast ? "disabled" : "";
+                let deleteButtonHtml = isPast ? "" : `<button class="delete-btn" onclick="deleteTask(${dayIndex}, ${taskIndex})">❌</button>`;
+                
+                div.innerHTML = `
+                    <div class="task-left">
+                        <input type="checkbox" ${task.done ? 'checked' : ''} ${disabledAttr} onclick="toggleTask(${dayIndex}, ${taskIndex})">
+                        <span class="${task.done ? 'done' : ''}">${task.text}</span>
+                    </div>
+                    ${deleteButtonHtml}
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function toggleTask(dayIndex, taskIndex) {
+            let tasks = tempStorage[`tasks-${dayIndex}`];
+            tasks[taskIndex].done = !tasks[taskIndex].done;
+
+            if (tasks[taskIndex].done && activatedStartDate === null) {
+                activatedStartDate = new Date(currentYear, currentMonth, currentDate);
+            }
+
+            loadTasks(dayIndex, false);
+            updateStatsUI();
+            updateAllProgress(); 
+        }
+
+        function getRequiredXpForLevel(lvl) {
+            if (lvl === 1) return 50;
+            return Math.round(50 * Math.pow(1.3, lvl - 1));
+        }
+
+        function updateAllProgress() {
+            let totalTasks = 0;
+            let totalDone = 0;
+
+            dayNames.forEach((day, index) => {
+                let tasks = tempStorage[`tasks-${index}`] || [];
+                let dayCount = tasks.length;
+                let dayDone = tasks.filter(t => t.done).length;
+
+                totalTasks += dayCount;
+                totalDone += dayDone;
+
+                let dayPercent = dayCount === 0 ? 0 : Math.round((dayDone / dayCount) * 100);
+                document.getElementById(`day-progress-${index}`).innerText = `Hoàn thành: ${dayPercent}% (${dayDone}/${dayCount})`;
+            });
+
+            let totalPercent = totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
+            let weekDegrees = (totalPercent / 100) * 360;
+            document.getElementById('week-circle-bg').style.background = `conic-gradient(#28a745 ${weekDegrees}deg, #e9ecef ${weekDegrees}deg)`;
+            document.getElementById('week-percent-text').innerText = `${totalPercent}%`;
+            document.getElementById('week-tasks-text').innerText = `${totalDone}/${totalTasks} việc`;
+
+            let weeklyXp = Math.min(totalDone * 2, 50); 
+            let pastWeeksXp = 0; 
+            let totalXp = pastWeeksXp + weeklyXp;
+
+            let currentLevel = 1;
+            let xpRemaining = totalXp;
+            let xpNeededForNext = getRequiredXpForLevel(currentLevel);
+
+            while (xpRemaining >= xpNeededForNext && currentLevel < 30) {
+                xpRemaining -= xpNeededForNext;
+                currentLevel++;
+                xpNeededForNext = getRequiredXpForLevel(currentLevel);
+            }
+
+            if (currentLevel === 30) {
+                xpRemaining = xpNeededForNext; 
+            }
+
+            if (currentLevel !== lastLevel) {
+                let newBackgroundIndex = Math.floor(Math.random() * backgroundImages.length);
+                document.body.style.backgroundImage = backgroundImages[newBackgroundIndex];
+                lastLevel = currentLevel;
+            }
+
+            let levelPercent = Math.min(Math.round((xpRemaining / xpNeededForNext) * 100), 100);
+            let levelDegrees = (levelPercent / 100) * 360;
+            document.getElementById('level-circle-bg').style.background = `conic-gradient(#e67e22 ${levelDegrees}deg, #fdf2e9 ${levelDegrees}deg)`;
+            
+            document.getElementById('current-level').innerText = currentLevel === 30 ? "30 (MAX)" : currentLevel;
+            document.getElementById('level-percent-text').innerText = `${levelPercent}%`;
+            document.getElementById('level-xp-text').innerText = currentLevel === 30 ? "MAX LEVEL" : `${xpRemaining} / ${xpNeededForNext} XP`;
+            document.getElementById('total-xp-text').innerText = `Tổng tích lũy: ${totalXp} XP`;
+            document.getElementById('weekly-xp-text').innerText = `Điểm tuần: ${weeklyXp}/50 XP`;
+        }
+    </script>
+</body>
+</html>
