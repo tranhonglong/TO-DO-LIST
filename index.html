@@ -108,7 +108,7 @@
 
     <div class="title-container">
         <span class="title-icon">📅</span>
-        <input type="text" class="editable-title" value="QUẢN LÝ TIẾN ĐỘ TUẦN" title="Bấm vào đây để đổi tên tiêu đề">
+        <input type="text" id="main-title" class="editable-title" value="QUẢN LÝ TIẾN ĐỘ TUẦN" title="Bấm vào đây để đổi tên tiêu đề">
     </div>
     
     <div class="current-date-title" id="realtime-clock">Hôm nay: --/--/----</div>
@@ -155,6 +155,7 @@
 
         const dayNames = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"];
         const grid = document.getElementById('week-grid');
+        const titleInput = document.getElementById('main-title');
 
         const now = new Date();
         const currentYear = now.getFullYear();
@@ -174,6 +175,38 @@
         ];
 
         let lastLevel = 1;
+        let tempStorage = {
+            "tasks-0": [], "tasks-1": [], "tasks-2": [], "tasks-3": [], "tasks-4": [], "tasks-5": [], "tasks-6": []
+        };
+
+        // Hàm lưu dữ liệu vào localStorage
+        function saveData() {
+            localStorage.setItem('gamified_tasks', JSON.stringify(tempStorage));
+            if (activatedStartDate) {
+                localStorage.setItem('gamified_start_date', activatedStartDate.toISOString());
+            } else {
+                localStorage.removeItem('gamified_start_date');
+            }
+            localStorage.setItem('gamified_title', titleInput.value);
+        }
+
+        // Hàm tải dữ liệu từ localStorage
+        function loadData() {
+            const savedTasks = localStorage.getItem('gamified_tasks');
+            if (savedTasks) {
+                tempStorage = JSON.parse(savedTasks);
+            }
+            
+            const savedStartDate = localStorage.getItem('gamified_start_date');
+            if (savedStartDate) {
+                activatedStartDate = new Date(savedStartDate);
+            }
+
+            const savedTitle = localStorage.getItem('gamified_title');
+            if (savedTitle) {
+                titleInput.value = savedTitle;
+            }
+        }
 
         function updateStatsUI() {
             const boxStart = document.getElementById('box-start-date');
@@ -212,9 +245,11 @@
 
         const weekDates = getWeekDates();
 
-        let tempStorage = {
-            "tasks-0": [], "tasks-1": [], "tasks-2": [], "tasks-3": [], "tasks-4": [], "tasks-5": [], "tasks-6": []
-        };
+        // LẮNG NGHE SỰ KIỆN ĐỔI TIÊU ĐỀ ĐỂ LƯU
+        titleInput.addEventListener('input', saveData);
+
+        // KHỞI ĐỘNG ỨNG DỤNG: Tải dữ liệu cũ trước khi render giao diện
+        loadData();
 
         weekDates.forEach((dateObj, index) => {
             let dayBox = document.createElement('div');
@@ -227,7 +262,7 @@
             
             let lockStatusHtml = "";
             if (isToday) {
-                dayBox.classList.add('today'); // Kích hoạt hiệu ứng to hơn và đổi màu
+                dayBox.classList.add('today'); 
             } else if (isPast) {
                 dayBox.classList.add('locked');
                 lockStatusHtml = `<span class="lock-badge">🔒 Đã khóa & Chốt điểm</span>`;
@@ -262,12 +297,14 @@
             tempStorage[`tasks-${dayIndex}`].push({ text: taskText.trim(), done: false });
             loadTasks(dayIndex, isPast);
             updateAllProgress();
+            saveData(); // Lưu lại thay đổi
         }
 
         function deleteTask(dayIndex, taskIndex) {
             tempStorage[`tasks-${dayIndex}`].splice(taskIndex, 1);
             loadTasks(dayIndex, false);
             updateAllProgress();
+            saveData(); // Lưu lại thay đổi
         }
 
         function loadTasks(dayIndex, isPast) {
@@ -296,13 +333,25 @@
             let tasks = tempStorage[`tasks-${dayIndex}`];
             tasks[taskIndex].done = !tasks[taskIndex].done;
 
+            // Kiểm tra kích hoạt ngày bắt đầu hành trình
             if (tasks[taskIndex].done && activatedStartDate === null) {
                 activatedStartDate = new Date(currentYear, currentMonth, currentDate);
+            } else {
+                // Kiểm tra xem còn việc nào trong toàn bộ lịch trình được check nữa không, nếu không còn thì reset ngày bắt đầu
+                let bấtKỳViệcNàoXong = false;
+                for (let key in tempStorage) {
+                    if (tempStorage[key].some(t => t.done)) {
+                        bấtKỳViệcNàoXong = true;
+                        break;
+                    }
+                }
+                if (!bấtKỳViệcNàoXong) activatedStartDate = null;
             }
 
             loadTasks(dayIndex, false);
             updateStatsUI();
             updateAllProgress(); 
+            saveData(); // Lưu lại thay đổi
         }
 
         function getRequiredXpForLevel(lvl) {
